@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Buchhaltungs-Generator</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    /* ---------------- TOPBAR / NAV ---------------- */
+    .app-navbar {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .app-brand {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-links {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .nav-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .nav-btn:hover {
+      color: #ffffff;
+      background: #1e293b;
+    }
+    .nav-btn.active {
+      color: #ffffff;
+      background: #2563eb;
+    }
+
+    /* Dropdown Menü für Lernen */
+    .nav-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #ffffff;
+      min-width: 220px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      padding: 6px;
+      margin-top: 4px;
+      z-index: 110;
+    }
+    .dropdown-content.show {
+      display: block;
+    }
+    .dropdown-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #0f172a;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .dropdown-item:hover {
+      background: #f1f5f9;
+      color: #2563eb;
+    }
+
+    /* ---------------- VIEWS ---------------- */
+    .view-section {
+      display: none;
+      padding: 20px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .view-section.active {
+      display: block;
+    }
+
+    /* ---------------- BUTTONS & CONTROLS ---------------- */
+    button, select {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 7px 14px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #0f172a;
+      cursor: pointer;
+      outline: none;
+      transition: background 0.15s;
+    }
+    button.primary {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    button.primary:hover {
+      background: #1d4ed8;
+    }
+
+    /* ---------------- GENERATOR TOOLBAR & PREVIEW ---------------- */
+    .gen-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      background: #ffffff;
+      padding: 12px 18px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+    .gen-toolbar-left {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .page-preview-wrapper {
+      padding: 10px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 25px;
+    }
+    .a4-page {
+      background: #ffffff;
+      width: 210mm;
+      min-height: 297mm;
+      height: 297mm;
+      padding: 8mm 12mm 6mm 12mm;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-radius: 2px;
+      page-break-after: always;
+      break-after: page;
+    }
+    .header {
+      display: table;
+      width: 100%;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+    .header-solution {
+      border-bottom-color: #2563eb;
+    }
+    .header-left {
+      display: table-cell;
+      vertical-align: bottom;
+    }
+    .header-title {
+      font-size: 11pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #0f172a;
+    }
+    .header-subtitle {
+      font-size: 7.5pt;
+      color: #64748b;
+      margin-top: 1px;
+    }
+    .header-right {
+      display: table-cell;
+      text-align: right;
+      vertical-align: bottom;
+      font-size: 8.5pt;
+      color: #334155;
+    }
+    .meta-line {
+      display: inline-block;
+      border-bottom: 1.2px dotted #94a3b8;
+      height: 12px;
+      vertical-align: middle;
+    }
+
+    .task-block {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      margin-bottom: 6px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 5px 8px;
+    }
+    .task-block:last-child {
+      margin-bottom: 0;
+    }
+    .task-header {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-bottom: 4px;
+      line-height: 1.25;
+      flex-shrink: 0;
+    }
+    .task-badge {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 7pt;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .task-badge.solution-badge {
+      background: #2563eb;
+    }
+    .task-desc {
+      font-size: 8.5pt;
+      color: #334155;
+    }
+
+    .t-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 3px;
+      overflow: hidden;
+      flex: 1;
+      height: 100%;
+    }
+    .t-label-soll {
+      width: 50%;
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #1e293b;
+      text-align: left;
+      padding: 1.5px 6px;
+      border-right: 1.5px solid #0f172a;
+      border-bottom: 1.5px solid #0f172a;
+      background: #f8fafc;
+      text-transform: uppercase;
+    }
+    .t-label-haben {
+      width: 50%;
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #1e293b;
+      text-align: right;
+      padding: 1.5px 6px;
+      border-bottom: 1.5px solid #0f172a;
+      background: #f8fafc;
+      text-transform: uppercase;
+    }
+    .t-body-soll {
+      width: 50%;
+      border-right: 1.5px solid #0f172a;
+      vertical-align: top;
+      padding: 2px 5px;
+      height: 100%;
+      font-size: 8pt;
+    }
+    .t-body-haben {
+      width: 50%;
+      vertical-align: top;
+      padding: 2px 5px;
+      height: 100%;
+      font-size: 8pt;
+      text-align: right;
+    }
+    .grid-line {
+      border-bottom: 1px dashed #e2e8f0;
+      height: 14px;
+    }
+    .solution-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 7.5pt;
+      color: #1d4ed8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+    .solution-row.haben-row {
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    /* ---------------- QUIZ STYLES ---------------- */
+    .quiz-container {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .quiz-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .quiz-task-box {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 14.5px;
+      font-weight: 500;
+      line-height: 1.45;
+      margin-bottom: 20px;
+    }
+    .quiz-side-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .quiz-side-box {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 14px;
+      background: #ffffff;
+    }
+    .quiz-side-box h3 {
+      margin: 0 0 12px 0;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .quiz-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+    .quiz-del-btn {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #64748b;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .quiz-del-btn:hover {
+      background: #fee2e2;
+      color: #dc2626;
+      border-color: #fca5a5;
+    }
+
+    /* Feedback Box */
+    .quiz-feedback {
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 18px;
+      display: none;
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    .quiz-feedback.success {
+      display: block;
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      color: #14532d;
+    }
+    .quiz-feedback.error {
+      display: block;
+      background: #fef2f2;
+      border: 1.5px solid #fca5a5;
+      color: #7f1d1d;
+    }
+    .feedback-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .feedback-list {
+      margin: 6px 0 12px 18px;
+      padding: 0;
+      font-size: 13px;
+    }
+    .feedback-list li {
+      margin-bottom: 4px;
+    }
+    .feedback-solution-box {
+      margin-top: 12px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: #0f172a;
+    }
+
+    /* ---------------- THEORIE: AKTIV / PASSIV STYLES ---------------- */
+    .theory-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .theory-card h2 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #0f172a;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+    .ap-comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 16px;
+    }
+    .ap-box {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 16px;
+      background: #f8fafc;
+    }
+    .ap-box.aktiv {
+      border-top: 4px solid #2563eb;
+    }
+    .ap-box.passiv {
+      border-top: 4px solid #0f172a;
+    }
+    .ap-box h3 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ap-tag {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .ap-tag.aktiv-bg { background: #2563eb; }
+    .ap-tag.passiv-bg { background: #0f172a; }
+
+    .tkonto-schema {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      background: #ffffff;
+      border: 1.5px solid #94a3b8;
+      border-radius: 4px;
+    }
+    .tkonto-schema th {
+      padding: 4px 8px;
+      font-size: 12px;
+      border-bottom: 1.5px solid #94a3b8;
+      background: #f1f5f9;
+    }
+    .tkonto-schema td {
+      padding: 8px 10px;
+      font-size: 12px;
+      vertical-align: top;
+      width: 50%;
+    }
+    .tkonto-schema td:first-child {
+      border-right: 1.5px solid #94a3b8;
+    }
+    .plus-badge { color: #16a34a; font-weight: 700; }
+    .minus-badge { color: #dc2626; font-weight: 700; }
+
+    .rule-card {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-top: 16px;
+      font-size: 13.5px;
+      color: #1e40af;
+      line-height: 1.5;
+    }
+
+    /* ---------------- MODAL ---------------- */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(2px);
+      z-index: 200;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-backdrop.active {
+      display: flex;
+    }
+    .modal-box {
+      background: #ffffff;
+      width: 620px;
+      max-width: 90%;
+      border-radius: 8px;
+      padding: 20px;
+      color: #0f172a;
+    }
+    .modal-header {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+    .account-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      max-height: 55vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .account-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .account-input-group label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #475569;
+    }
+    .account-input-group input {
+      padding: 6px 8px;
+      font-size: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+    }
+
+    /* ---------------- PRINT RULES ---------------- */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 8mm 12mm 6mm 12mm;
+      }
+      body {
+        background: #ffffff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .app-navbar, .gen-toolbar, .modal-backdrop, #view-quiz, #view-theory-ap {
+        display: none !important;
+      }
+      #view-generator {
+        display: block !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .page-preview-wrapper {
+        padding: 0 !important;
+        gap: 0 !important;
+      }
+      .a4-page {
+        width: 100% !important;
+        height: 98vh !important;
+        min-height: auto !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav class="app-navbar">
+  <div class="app-brand">
+    📊 Buchhaltungs-Generator
+  </div>
+  <div class="nav-links">
+    <!-- Dropdown Menü für Lernen -->
+    <div class="nav-dropdown">
+      <button id="nav-learn-btn" class="nav-btn">🧠 Lernen &#9662;</button>
+      <div class="dropdown-content" id="learnDropdown">
+        <button class="dropdown-item" id="drop-quiz-btn">🎯 Interaktiver Buchungstrainer</button>
+        <button class="dropdown-item" id="drop-theory-btn">⚖️ Aktiv / Passiv Konten</button>
+      </div>
+    </div>
+
+    <button id="nav-modal-btn" class="nav-btn">⚙️ Kontenplan</button>
+  </div>
+</nav>
+
+<!-- ================= VIEW: GENERATOR ================= -->
+<main id="view-generator" class="view-section active">
+  <div class="gen-toolbar">
+    <div class="gen-toolbar-left">
+      <select id="typeSelect">
+        <option value="all">Alle Themen gemischt</option>
+        <option value="skonto">⭐ Nur Skontofälle (Lieferant & Kunde)</option>
+        <option value="retoure">📦 Nur Retouren & Rücksendungen</option>
+        <option value="rabatt_gutschrift">🏷️ Nur Rabatte & Gutschriften</option>
+        <option value="ausgleich">💳 Nur Rechnungsausgleich (Zahlungen)</option>
+        <option value="basic">🛒 Nur Standard Einkauf & Verkauf</option>
+        <option value="bankomat">💳 Bankomat- & Kreditkartenzahlungen</option>
+        <option value="drittland">🌍 Drittland (Import & Export)</option>
+        <option value="eu_binnenmarkt">🇪🇺 Binnenmarktgeschäfte (EU Import/Export)</option>
+        <option value="fremdwaehrung">💱 Fremdwährungsgeschäfte & Kurse</option>
+      </select>
+      <button id="shuffleBtn" class="primary">🎲 Neu generieren</button>
+    </div>
+    <button id="printBtn">🖨️ Drucken / PDF (2 Seiten)</button>
+  </div>
+
+  <div class="page-preview-wrapper">
+    <!-- SEITE 1: ÜBUNGSBLATT -->
+    <div class="a4-page">
+      <div class="header">
+        <div class="header-left">
+          <div class="header-title">Rechnungswesen &middot; Buchungssätze</div>
+          <div class="header-subtitle">Einkauf, Verkauf & Matura-Spezialfälle &middot; Soll / Haben Zuordnung</div>
+        </div>
+        <div class="header-right">
+          <b>Name:</b> <span class="meta-line" style="min-width: 130px;"></span> &nbsp;&nbsp;
+          <b>Datum:</b> <span class="meta-line" style="min-width: 65px;"></span>
+        </div>
+      </div>
+      <div id="exerciseTaskList" style="display: flex; flex-direction: column; flex: 1; justify-content: space-between;"></div>
+    </div>
+
+    <!-- SEITE 2: LÖSUNGSBLATT -->
+    <div class="a4-page">
+      <div class="header header-solution">
+        <div class="header-left">
+          <div class="header-title" style="color: #2563eb;">Rechnungswesen &middot; MUSTERLÖSUNG</div>
+          <div class="header-subtitle">Offizielles Lösungsblatt mit zugeordneten Konten und Beträgen</div>
+        </div>
+        <div class="header-right">
+          <b>Musterlösung</b> &nbsp;&middot;&nbsp; 8 Aufgaben
+        </div>
+      </div>
+      <div id="solutionTaskList" style="display: flex; flex-direction: column; flex: 1; justify-content: space-between;"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ================= VIEW: INTERAKTIVER TRAINER ================= -->
+<main id="view-quiz" class="view-section">
+  <div class="quiz-container">
+    <div class="quiz-stats">
+      <div style="font-size: 16px; font-weight: 700;">Interaktiver Buchungstrainer</div>
+      <div style="font-size: 13px; color: #475569;">
+        Score: <b id="quizScore" style="color: #2563eb;">0</b> gelöst
+      </div>
+    </div>
+
+    <div class="quiz-task-box" id="quizTaskText">
+      Lade Aufgabe...
+    </div>
+
+    <div class="quiz-side-grid">
+      <!-- SOLL SEITE -->
+      <div class="quiz-side-box">
+        <h3 style="color: #2563eb;">Soll (+)</h3>
+        <div id="quizSollInputs"></div>
+        <button type="button" id="addSollBtn" style="font-size: 11px; padding: 4px 8px; margin-top: 6px;">+ Zeile hinzufügen</button>
+      </div>
+
+      <!-- HABEN SEITE -->
+      <div class="quiz-side-box">
+        <h3 style="color: #0f172a;">Haben (&minus;)</h3>
+        <div id="quizHabenInputs"></div>
+        <button type="button" id="addHabenBtn" style="font-size: 11px; padding: 4px 8px; margin-top: 6px;">+ Zeile hinzufügen</button>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <button type="button" id="checkQuizBtn" class="primary">Antwort prüfen</button>
+      <button type="button" id="nextQuizBtn">Nächste Aufgabe &rarr;</button>
+    </div>
+
+    <div id="quizFeedback" class="quiz-feedback"></div>
+  </div>
+</main>
+
+<!-- ================= VIEW: THEORIE AKTIV / PASSIV ================= -->
+<main id="view-theory-ap" class="view-section">
+  <div class="theory-card">
+    <h2>⚖️ Die Bilanz: Unterschied zwischen Aktiv und Passiv</h2>
+    <p style="font-size: 14px; color: #475569; line-height: 1.5; margin-bottom: 20px;">
+      Die Bilanz zeigt die finanzielle Lage eines Unternehmens zu einem Stichtag. Sie beantwortet zwei fundamentale Fragen: <b>Wofür wurde das Geld verwendet?</b> (Aktiva) und <b>Woher stammt das Geld?</b> (Passiva).
+    </p>
+
+    <div class="ap-comparison-grid">
+      <!-- AKTIVKONTEN -->
+      <div class="ap-box aktiv">
+        <h3>
+          <span>Aktivkonten (Vermögen)</span>
+          <span class="ap-tag aktiv-bg">Aktiva (Links)</span>
+        </h3>
+        <p style="font-size: 13px; color: #334155; margin: 6px 0 12px 0;">
+          Zeigen alle <b>Vermögenswerte</b> des Unternehmens (Mittelverwendung).
+        </p>
+        <ul style="font-size: 12.5px; color: #475569; padding-left: 18px; margin-bottom: 12px;">
+          <li><b>Anlagevermögen:</b> Maschinen, BGA, Gebäude, Fuhrpark</li>
+          <li><b>Umlaufvermögen:</b> Handelswarenvorrat, Kundenforderungen, Bank, Kassa</li>
+        </ul>
+
+        <div style="font-size: 12px; font-weight: 700; margin-top: 8px;">T-Konto Buchungsregel:</div>
+        <table class="tkonto-schema">
+          <tr>
+            <th style="color: #2563eb; text-align: left;">Soll (+)</th>
+            <th style="text-align: right;">Haben (&minus;)</th>
+          </tr>
+          <tr>
+            <td>
+              <div><b>+ Anfangsbestand (AB)</b></div>
+              <div class="plus-badge">+ Vermehrungen (Zugänge)</div>
+            </td>
+            <td style="text-align: right;">
+              <div class="minus-badge">&minus; Verminderungen (Abgänge)</div>
+              <div><b>&minus; Schlussbestand (SB)</b></div>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- PASSIVKONTEN -->
+      <div class="ap-box passiv">
+        <h3>
+          <span>Passivkonten (Kapital / Schulden)</span>
+          <span class="ap-tag passiv-bg">Passiva (Rechts)</span>
+        </h3>
+        <p style="font-size: 13px; color: #334155; margin: 6px 0 12px 0;">
+          Zeigen die <b>Finanzierung</b> bzw. Herkunft des Kapitals (Mittelherkunft).
+        </p>
+        <ul style="font-size: 12.5px; color: #475569; padding-left: 18px; margin-bottom: 12px;">
+          <li><b>Eigenkapital:</b> Stammkapital, Rücklagen, Gewinn</li>
+          <li><b>Fremdkapital (Schulden):</b> Bankdarlehen, Lieferverbindlichkeiten</li>
+        </ul>
+
+        <div style="font-size: 12px; font-weight: 700; margin-top: 8px;">T-Konto Buchungsregel:</div>
+        <table class="tkonto-schema">
+          <tr>
+            <th style="text-align: left;">Soll (&minus;)</th>
+            <th style="color: #0f172a; text-align: right;">Haben (+)</th>
+          </tr>
+          <tr>
+            <td>
+              <div class="minus-badge">&minus; Verminderungen (Abgänge)</div>
+              <div><b>&minus; Schlussbestand (SB)</b></div>
+            </td>
+            <td style="text-align: right;">
+              <div><b>+ Anfangsbestand (AB)</b></div>
+              <div class="plus-badge">+ Vermehrungen (Zugänge)</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="rule-card">
+      <b>💡 Die goldene Regel für Schüler:</b>
+      <div style="margin-top: 4px;">
+        1. <b>Aktivkonto</b> wird mehr &rarr; <b>Soll</b> | Aktivkonto wird weniger &rarr; <b>Haben</b><br>
+        2. <b>Passivkonto</b> wird mehr &rarr; <b>Haben</b> | Passivkonto wird weniger &rarr; <b>Soll</b>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL: KONTENPLAN -->
+<div class="modal-backdrop" id="customModal">
+  <div class="modal-box">
+    <div class="modal-header">Kontenplan des Schülers konfigurieren</div>
+    <div class="account-grid" id="accountInputsContainer"></div>
+    <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+      <button type="button" id="resetModalBtn">Standard wiederherstellen</button>
+      <button type="button" id="saveModalBtn" class="primary">Speichern & Anwenden</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 1. KONTEN-MANAGEMENT (Exakt nach deinen Merkzetteln)
+  const defaultAccounts = {
+    "hw_einsatz": "5000 Handelswareneinsatz 20%",
+    "vorsteuer": "2500 Vorsteuer",
+    "lieferverb": "3300 Lieferverbindlichkeiten",
+    "kassa": "2700 Kassa",
+    "bank": "2800 Bank",
+    "lieferford": "2000 Lieferforderungen",
+    "hw_erloese": "4000 Handelswarenerlöse 20%",
+    "ust": "3500 Umsatzsteuer",
+    "bezugskosten": "5600 Bezugskosten",
+    "erloesschmaelerung": "4400 Erlösberichtigungen 20%",
+    "lief_skonto": "5880 Lieferantenskonti auf Wareneinkauf 20%",
+    "kunden_skonto": "4410 Kundenskonto",
+    "bankomat_konto": "2880 Forderungen Kreditkartenunternehmen",
+    "bankspesen": "7790 Spesen des Geldverkehrs",
+    "kursgewinn": "4840 Fremdwährungskursgewinne",
+    "kursverlust": "7815 Fremdwährungskursverluste",
+    "erwerbsteuer": "3510 Erwerbsteuer",
+    "vost_ig": "2510 Vorsteuer aus ig. Erwerben",
+    "lisk_ig": "5885 Lieferantenskonti aus ig. Erwerben",
+    "erloese_ig": "4010 Erlöse aus ig. Lieferungen",
+    "kusko_ig": "4415 Kundenskonti ig Lieferung",
+    "exporterloese": "4015 Exporterlöse",
+    "ausgangsfrachten": "7301 Ausgangsfrachten 0%",
+    "euvst": "2520 Einfuhrumsatzsteuer"
+  };
+
+  const accountLabels = {
+    "hw_einsatz": "Handelswareneinsatz",
+    "vorsteuer": "Vorsteuer",
+    "lieferverb": "Lieferverbindlichkeiten",
+    "kassa": "Kassa",
+    "bank": "Bank",
+    "lieferford": "Lieferforderungen",
+    "hw_erloese": "Handelswarenerlöse",
+    "ust": "Umsatzsteuer",
+    "bezugskosten": "Bezugskosten",
+    "erloesschmaelerung": "Erlösberichtigungen",
+    "lief_skonto": "Lieferantenskonto",
+    "kunden_skonto": "Kundenskonto",
+    "bankomat_konto": "Forderungen Kreditkartenunternehmen",
+    "bankspesen": "Spesen des Geldverkehrs",
+    "kursgewinn": "Fremdwährungskursgewinne",
+    "kursverlust": "Fremdwährungskursverluste",
+    "erwerbsteuer": "Erwerbsteuer",
+    "vost_ig": "Vorsteuer aus ig. Erwerben",
+    "lisk_ig": "Lieferantenskonti aus ig. Erwerben",
+    "erloese_ig": "Erlöse aus ig. Lieferungen",
+    "kusko_ig": "Kundenskonti ig Lieferung",
+    "exporterloese": "Exporterlöse",
+    "ausgangsfrachten": "Ausgangsfrachten",
+    "euvst": "Einfuhrumsatzsteuer"
+  };
+
+  function getAccounts() {
+    const saved = localStorage.getItem("customAccountsPlan");
+    return saved ? JSON.parse(saved) : { ...defaultAccounts };
+  }
+
+  // 2. AUFGABEN POOL
+  const casePool = [
+    {
+      category: "skonto",
+      generate: (usedValues) => {
+        let brutto;
+        let safety = 0;
+        do {
+          brutto = Math.floor(Math.random() * 30 + 6) * 100;
+          safety++;
+        } while (usedValues.has(brutto) && safety < 50);
+        usedValues.add(brutto);
+
+        const skontoProzent = Math.random() > 0.5 ? 2 : 3;
+        const skontoBrutto = Math.round(brutto * (skontoProzent / 100));
+        const zahlbetrag = brutto - skontoBrutto;
+        const skontoNetto = Math.round(skontoBrutto / 1.2);
+        const vstKorr = skontoBrutto - skontoNetto;
+        return {
+          text: `Ausgleich einer Eingangsrechnung über EUR ${brutto.toLocaleString("de-DE")},- per Bank unter Abzug von ${skontoProzent}% Skonto.`,
+          reason: "Die Lieferverbindlichkeit wird im Soll voll ausgebucht. Im Haben steht die Banküberweisung, das Lieferantenskonto (Netto) und die Vorsteuer-Korrektur.",
+          soll: [{ role: "lieferverb", val: brutto }],
+          haben: [
+            { role: "bank", val: zahlbetrag },
+            { role: "lief_skonto", val: skontoNetto },
+            { role: "vorsteuer", val: vstKorr }
+          ]
+        };
+      }
+    },
+    {
+      category: "skonto",
+      generate: (usedValues) => {
+        let brutto;
+        let safety = 0;
+        do {
+          brutto = Math.floor(Math.random() * 30 + 6) * 100;
+          safety++;
+        } while (usedValues.has(brutto) && safety < 50);
+        usedValues.add(brutto);
+
+        const skontoProzent = Math.random() > 0.5 ? 2 : 3;
+        const skontoBrutto = Math.round(brutto * (skontoProzent / 100));
+        const zahlbetrag = brutto - skontoBrutto;
+        const skontoNetto = Math.round(skontoBrutto / 1.2);
+        const ustKorr = skontoBrutto - skontoNetto;
+        return {
+          text: `Ein Kunde begleicht eine Ausgangsrechnung über EUR ${brutto.toLocaleString("de-DE")},- per Bank unter Abzug von ${skontoProzent}% Kundenskonto.`,
+          reason: "Im Soll wird der Bankeingang, der Kundenskonto (Netto) und die USt-Korrektur verbucht. Die Lieferforderung an den Kunden wird im Haben voll ausgebucht.",
+          soll: [
+            { role: "bank", val: zahlbetrag },
+            { role: "kunden_skonto", val: skontoNetto },
+            { role: "ust", val: ustKorr }
+          ],
+          haben: [{ role: "lieferford", val: brutto }]
+        };
+      }
+    },
+    {
+      category: "retoure",
+      generate: (usedValues) => {
+        let netto;
+        let safety = 0;
+        do {
+          netto = Math.floor(Math.random() * 45 + 10) * 10;
+          safety++;
+        } while (usedValues.has(netto) && safety < 50);
+        usedValues.add(netto);
+
+        const ust = Math.round(netto * 0.2);
+        const brutto = netto + ust;
+        return {
+          text: `Rücksendung mangelhafter Handelswaren an den Lieferanten: Gutschriftanzeige über EUR ${netto.toLocaleString("de-DE")},- netto (+ 20% USt: EUR ${ust.toLocaleString("de-DE")},-).`,
+          reason: "Lieferantenretoure: Unsere Verbindlichkeit sinkt im Soll. Der HW-Einsatz und die Vorsteuer werden im Haben korrigiert.",
+          soll: [{ role: "lieferverb", val: brutto }],
+          haben: [{ role: "hw_einsatz", val: netto }, { role: "vorsteuer", val: ust }]
+        };
+      }
+    },
+    {
+      category: "retoure",
+      generate: (usedValues) => {
+        let netto;
+        let safety = 0;
+        do {
+          netto = Math.floor(Math.random() * 45 + 10) * 10;
+          safety++;
+        } while (usedValues.has(netto) && safety < 50);
+        usedValues.add(netto);
+
+        const ust = Math.round(netto * 0.2);
+        const brutto = netto + ust;
+        return {
+          text: `Ein Kunde sendet mangelhafte Handelswaren an uns zurück: Wir erstellen eine Gutschrift über EUR ${netto.toLocaleString("de-DE")},- netto (+ 20% USt: EUR ${ust.toLocaleString("de-DE")},-).`,
+          reason: "Kundenretoure: Die HW-Erlöse und die Umsatzsteuer sinken im Soll. Die Forderung an den Kunden sinkt im Haben.",
+          soll: [{ role: "hw_erloese", val: netto }, { role: "ust", val: ust }],
+          haben: [{ role: "lieferford", val: brutto }]
+        };
+      }
+    },
+    {
+      category: "rabatt_gutschrift",
+      generate: (usedValues) => {
+        let netto;
+        let safety = 0;
+        do {
+          netto = Math.floor(Math.random() * 30 + 5) * 10;
+          safety++;
+        } while (usedValues.has(netto) && safety < 50);
+        usedValues.add(netto);
+
+        const ust = Math.round(netto * 0.2);
+        const brutto = netto + ust;
+        return {
+          text: `Nachträglicher Mängelrabatt an einen Kunden: Gutschrift über EUR ${netto.toLocaleString("de-DE")},- netto (+ 20% USt).`,
+          reason: "Nachträglicher Kundenrabatt wird auf Erlösberichtigungen + USt im Soll gebucht; die Kundenforderung sinkt im Haben.",
+          soll: [{ role: "erloesschmaelerung", val: netto }, { role: "ust", val: ust }],
+          haben: [{ role: "lieferford", val: brutto }]
+        };
+      }
+    },
+    {
+      category: "ausgleich",
+      generate: (usedValues) => {
+        let brutto;
+        let safety = 0;
+        do {
+          brutto = Math.floor(Math.random() * 12 + 1) * 50;
+          safety++;
+        } while (usedValues.has(brutto) && safety < 50);
+        usedValues.add(brutto);
+
+        return {
+          text: `Barzahlung einer offenen Eingangsrechnung über EUR ${brutto.toLocaleString("de-DE")},- direkt an den Lieferanten.`,
+          reason: "Barzahlung: Die Lieferverbindlichkeit sinkt im Soll, und der Barbestand in der Kassa verringert sich im Haben.",
+          soll: [{ role: "lieferverb", val: brutto }],
+          haben: [{ role: "kassa", val: brutto }]
+        };
+      }
+    },
+    {
+      category: "ausgleich",
+      generate: (usedValues) => {
+        let brutto;
+        let safety = 0;
+        do {
+          brutto = Math.floor(Math.random() * 25 + 4) * 100;
+          safety++;
+        } while (usedValues.has(brutto) && safety < 50);
+        usedValues.add(brutto);
+
+        return {
+          text: `Banküberweisung an den Lieferanten zum vollen Ausgleich einer offenen Eingangsrechnung über EUR ${brutto.toLocaleString("de-DE")},-.`,
+          reason: "Überweisung an Lieferanten: Die Lieferverbindlichkeit sinkt im Soll, das Bankguthaben sinkt im Haben.",
+          soll: [{ role: "lieferverb", val: brutto }],
+          haben: [{ role: "bank", val: brutto }]
+        };
+      }
+    },
+    {
+      category: "basic",
+      generate: (usedValues) => {
+        let netto;
+        let safety = 0;
+        do {
+          netto = Math.floor(Math.random() * 25 + 3) * 100;
+          safety++;
+        } while (usedValues.has(netto) && safety < 50);
+        usedValues.add(netto);
+
+        const ust = Math.round(netto * 0.2);
+        const brutto = netto + ust;
+        return {
+          text: `Eingangsrechnung ER über Handelswaren: EUR ${netto.toLocaleString("de-DE")},- netto (+ 20% USt), auf Ziel.`,
+          reason: "Wareneinkauf auf Ziel: Handelswareneinsatz und Vorsteuer stehen im Soll, die Verbindlichkeit an den Lieferanten (Brutto) steht im Haben.",
+          soll: [{ role: "hw_einsatz", val: netto }, { role: "vorsteuer", val: ust }],
+          haben: [{ role: "lieferverb", val: brutto }]
+        };
+      }
+    },
+    {
+      category: "basic",
+      generate: (usedValues) => {
+        let netto;
+        let safety = 0;
+        do {
+          netto = Math.floor(Math.random() * 25 + 3) * 100;
+          safety++;
+        } while (usedValues.has(netto) && safety < 50);
+        usedValues.add(netto);
+
+        const ust = Math.round(netto * 0.2);
+        const brutto = netto + ust;
+        return {
+          text: `Ausgangsrechnung AR an Kunden über Handelswaren: EUR ${netto.toLocaleString("de-DE")},- netto (+ 20% USt), auf Ziel.`,
+          reason: "Warenverkauf auf Ziel: Die Lieferforderung (Brutto) steht im Soll, die Handelswarenerlöse (Netto) und die USt stehen im Haben.",
+          soll: [{ role: "lieferford", val: brutto }],
+          haben: [{ role: "hw_erloese", val: netto }, { role: "ust", val: ust }]
+        };
+      }
+    },
+    {
+      category: "bankomat",
+      generate: (usedValues) => {
+        let brutto;
+        let safety = 0;
+        do {
+          brutto = Math.floor(Math.random() * 15 + 2) * 50;
+          safety++;
+        } while (usedValues.has(brutto) && safety < 50);
+        usedValues.add(brutto);
+
+        const spesen = Math.round(brutto * 0.02);
+        const nettoGutschrift = brutto - spesen;
+        return {
+          text: `Ein Kunde bezahlt eine offene Ausgangsrechnung über EUR ${brutto.toLocaleString("de-DE")},- mit Karte. Das Geld wird abzgl. 2% Spesen auf dem Verrechnungskonto gutgeschrieben.`,
+          reason: "Bankomat-Zahlung: Das Kreditkarten-Verrechnungskonto (2880) und die Spesen des Geldverkehrs (7790) stehen im Soll. Die Kundenforderung wird im Haben ausgebucht.",
+          soll: [
+            { role: "bankomat_konto", val: nettoGutschrift },
+            { role: "bankspesen", val: spesen }
+          ],
+          haben: [{ role: "lieferford", val: brutto }]
+        };
+      }
+    },
+    {
+      category: "drittland",
+      generate: (usedValues) => {
+        let netto;
+        let safety = 0;
+        do {
+          netto = Math.floor(Math.random() * 20 + 5) * 100;
+          safety++;
+        } while (usedValues.has(netto) && safety < 50);
+        usedValues.add(netto);
+
+        return {
+          text: `Einfuhr von Handelswaren aus den USA (Drittland) laut Eingangsrechnung des Lieferanten über EUR ${netto.toLocaleString("de-DE")},- (zoll- und steuerfrei laut Rechnung).`,
+          reason: "Drittland-Import: Der Wareneinkauf wird auf Handelswareneinsatz (5000) im Soll verbucht gegen die Lieferverbindlichkeit (3300) im Haben.",
+          soll: [{ role: "hw_einsatz", val: netto }],
+          haben: [{ role: "lieferverb", val: netto }]
+        };
+      }
+    },
+    {
+      category: "drittland",
+      generate: (usedValues) => {
+        let netto;
+        let safety = 0;
+        do {
+          netto = Math.floor(Math.random() * 20 + 5) * 100;
+          safety++;
+        } while (usedValues.has(netto) && safety < 50);
+        usedValues.add(netto);
+
+        return {
+          text: `Ausfuhrlieferung in die USA (Drittland): Ausgangsrechnung über Warenwert EUR ${netto.toLocaleString("de-DE")},-. Die Ausfuhr ist gem. UStG steuerfrei.`,
+          reason: "Drittland-Export: Die Lieferung ist steuerfrei. Die Forderung (2000) entsteht im Soll gegenüber den Exporterlösen (4015) im Haben.",
+          soll: [{ role: "lieferford", val: netto }],
+          haben: [{ role: "exporterloese", val: netto }]
+        };
+      }
+    },
+    {
+      category: "eu_binnenmarkt",
+      generate: (usedValues) => {
+        let netto;
+        let safety = 0;
+        do {
+          netto = Math.floor(Math.random() * 20 + 5) * 100;
+          safety++;
+        } while (usedValues.has(netto) && safety < 50);
+        usedValues.add(netto);
+
+        const ustVal = Math.round(netto * 0.2);
+        const bruttoVal = netto + ustVal;
+        return {
+          text: `Innergemeinschaftlicher Erwerb von Handelswaren aus Deutschland (EU) laut Eingangsrechnung über EUR ${netto.toLocaleString("de-DE")},- netto (USt ist selbst zu berechnen / Reverse Charge).`,
+          reason: "ig. Erwerb (EU): Handelswareneinsatz im Soll, dazu Vorsteuer aus ig. Erwerben (2510) im Soll. Im Haben stehen Lieferverbindlichkeiten (3300) und Erwerbsteuer (3510).",
+          soll: [
+            { role: "hw_einsatz", val: netto },
+            { role: "vost_ig", val: ustVal }
+          ],
+          haben: [
+            { role: "lieferverb", val: bruttoVal },
+            { role: "erwerbsteuer", val: ustVal }
+          ]
+        };
+      }
+    },
+    {
+      category: "eu_binnenmarkt",
+      generate: (usedValues) => {
+        let netto;
+        let safety = 0;
+        do {
+          netto = Math.floor(Math.random() * 20 + 5) * 100;
+          safety++;
+        } while (usedValues.has(netto) && safety < 50);
+        usedValues.add(netto);
+
+        return {
+          text: `Innergemeinschaftliche Lieferung (Ausgangsrechnung an Kunden in Deutschland mit gültiger UID) über EUR ${netto.toLocaleString("de-DE")},- netto.`,
+          reason: "ig. Lieferung (EU): Die Lieferung ist steuerfrei für den Verkäufer. Die Forderung (2000) steht im Soll an Erlöse aus ig. Lieferungen (4010) im Haben.",
+          soll: [{ role: "lieferford", val: netto }],
+          haben: [{ role: "erloese_ig", val: netto }]
+        };
+      }
+    },
+    {
+      category: "fremdwaehrung",
+      generate: (usedValues) => {
+        let originalEUR;
+        let safety = 0;
+        do {
+          originalEUR = Math.floor(Math.random() * 15 + 10) * 100;
+          safety++;
+        } while (usedValues.has(originalEUR) && safety < 50);
+        usedValues.add(originalEUR);
+
+        const kursVerlust = Math.floor(Math.random() * 35 + 10);
+        const zahlungsBank = originalEUR - kursVerlust;
+
+        return {
+          text: `Ausgleich einer offenen Lieferforderung in Fremdwährung durch den Kunden per Bank. Verbucht war die Forderung mit EUR ${originalEUR.toLocaleString("de-DE")},-. Durch Kursänderung ergibt sich ein Kursverlust von EUR ${kursVerlust.toLocaleString("de-DE")},-.`,
+          reason: "Fremdwährung (Forderungsausgleich mit Kursverlust): Bank und FW-Kursverluste (7815) stehen im Soll gegen Lieferforderungen (2000) im Haben.",
+          soll: [
+            { role: "bank", val: zahlungsBank },
+            { role: "kursverlust", val: kursVerlust }
+          ],
+          haben: [
+            { role: "lieferford", val: originalEUR }
+          ]
+        };
+      }
+    },
+    {
+      category: "fremdwaehrung",
+      generate: (usedValues) => {
+        let originalEUR;
+        let safety = 0;
+        do {
+          originalEUR = Math.floor(Math.random() * 15 + 10) * 100;
+          safety++;
+        } while (usedValues.has(originalEUR) && safety < 50);
+        usedValues.add(originalEUR);
+
+        const kursGewinn = Math.floor(Math.random() * 35 + 10);
+        const zahlungsBank = originalEUR - kursGewinn;
+
+        return {
+          text: `Ausgleich einer offenen Lieferverbindlichkeit in Fremdwährung per Bank. Verbucht war die Verbindlichkeit mit EUR ${originalEUR.toLocaleString("de-DE")},-. Durch Kursänderung ergibt sich ein Kursgewinn von EUR ${kursGewinn.toLocaleString("de-DE")},-.`,
+          reason: "Fremdwährung (Verbindlichkeitsausgleich mit Kursgewinn): Lieferverbindlichkeiten (3300) im Soll gegen Bank und FW-Kursgewinne (4840) im Haben.",
+          soll: [
+            { role: "lieferverb", val: originalEUR }
+          ],
+          haben: [
+            { role: "bank", val: zahlungsBank },
+            { role: "kursgewinn", val: kursGewinn }
+          ]
+        };
+      }
+    }
+  ];
+
+  // 3. NAVIGATION (VIEW SWITCHER)
+  function switchView(viewName) {
+    document.querySelectorAll(".view-section").forEach(sec => sec.classList.remove("active"));
+    document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.remove("active"));
+    document.getElementById("learnDropdown").classList.remove("show");
+
+    document.getElementById(`view-${viewName}`).classList.add("active");
+
+    if (viewName === "generator") {
+      renderGenerator();
+    } else if (viewName === "quiz" || viewName === "theory-ap") {
+      document.getElementById("nav-learn-btn").classList.add("active");
+      if (viewName === "quiz" && !currentQuizTask) {
+        loadNextQuizTask();
+      }
+    }
+  }
+
+  // 4. GENERATOR LOGIK (MIT ANTI-DUPLIKATS-SCHUTZ & EINZIGARTIGEN BETRÄGEN)
+  function renderGenerator() {
+    const currentAccounts = getAccounts();
+    const filterType = document.getElementById("typeSelect").value;
+    const availableTemplates = filterType === "all" ? casePool : casePool.filter(c => c.category === filterType);
+
+    function shuffleArray(array) {
+      let arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    const tasks = [];
+    let shuffledTemplates = shuffleArray(availableTemplates);
+    let templateIndex = 0;
+    const usedValues = new Set();
+
+    for (let i = 0; i < 8; i++) {
+      if (templateIndex >= shuffledTemplates.length) {
+        shuffledTemplates = shuffleArray(availableTemplates);
+        templateIndex = 0;
+      }
+
+      let candidate;
+      let isDuplicate;
+      let safetyCounter = 0;
+
+      do {
+        candidate = shuffledTemplates[templateIndex % shuffledTemplates.length].generate(usedValues);
+        templateIndex++;
+        safetyCounter++;
+
+        isDuplicate = tasks.some(t => t.text === candidate.text);
+      } while (isDuplicate && safetyCounter < 20);
+
+      tasks.push(candidate);
+    }
+
+    const exContainer = document.getElementById("exerciseTaskList");
+    const solContainer = document.getElementById("solutionTaskList");
+    exContainer.innerHTML = "";
+    solContainer.innerHTML = "";
+
+    tasks.forEach((task, index) => {
+      const num = String(index + 1).padStart(2, "0");
+
+      // Angabe
+      const exBlock = document.createElement("div");
+      exBlock.className = "task-block";
+      exBlock.innerHTML = `
+          <div class="task-header"><span class="task-badge">${num}</span><span class="task-desc">${task.text}</span></div>
+          <table class="t-table">
+            <tr><td class="t-label-soll">Soll (+) &middot; Konto & Betrag</td><td class="t-label-haben">Haben (&minus;) &middot; Konto & Betrag</td></tr>
+            <tr><td class="t-body-soll"><div class="grid-line"></div><div class="grid-line"></div></td><td class="t-body-haben"><div class="grid-line"></div><div class="grid-line"></div></td></tr>
+          </table>`;
+      exContainer.appendChild(exBlock);
+
+      // Lösung
+      const solBlock = document.createElement("div");
+      solBlock.className = "task-block";
+      const sollHtml = task.soll.map(i => `<div class="solution-row"><span>${currentAccounts[i.role] || i.role}</span><span>EUR ${i.val.toLocaleString("de-DE")},-</span></div>`).join("");
+      const habenHtml = task.haben.map(i => `<div class="solution-row haben-row"><span>${currentAccounts[i.role] || i.role}</span><span>EUR ${i.val.toLocaleString("de-DE")},-</span></div>`).join("");
+
+      solBlock.innerHTML = `
+          <div class="task-header"><span class="task-badge solution-badge">${num}</span><span class="task-desc">${task.text}</span></div>
+          <table class="t-table">
+            <tr><td class="t-label-soll">Soll (+) &middot; Konto & Betrag</td><td class="t-label-haben">Haben (&minus;) &middot; Konto & Betrag</td></tr>
+            <tr><td class="t-body-soll">${sollHtml}</td><td class="t-body-haben">${habenHtml}</td></tr>
+          </table>`;
+      solContainer.appendChild(solBlock);
+    });
+  }
+
+  // 5. INTERAKTIVES QUIZ LOGIK
+  let currentQuizTask = null;
+  let quizScore = 0;
+
+  function loadNextQuizTask() {
+    const template = casePool[Math.floor(Math.random() * casePool.length)];
+    currentQuizTask = template.generate(new Set());
+
+    document.getElementById("quizTaskText").textContent = currentQuizTask.text;
+    const fb = document.getElementById("quizFeedback");
+    fb.className = "quiz-feedback";
+    fb.style.display = "none";
+    fb.innerHTML = "";
+
+    document.getElementById("quizSollInputs").innerHTML = "";
+    document.getElementById("quizHabenInputs").innerHTML = "";
+
+    addQuizRow("soll");
+    addQuizRow("haben");
+  }
+
+  function addQuizRow(side) {
+    const container = document.getElementById(side === "soll" ? "quizSollInputs" : "quizHabenInputs");
+    const accounts = getAccounts();
+
+    let options = `<option value="">-- Konto wählen --</option>`;
+    for (const [key, val] of Object.entries(accounts)) {
+      options += `<option value="${key}">${val}</option>`;
+    }
+
+    const row = document.createElement("div");
+    row.className = "quiz-row";
+    row.innerHTML = `
+        <select style="flex: 2;">${options}</select>
+        <input type="number" placeholder="Betrag (€)" style="flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+        <button type="button" class="quiz-del-btn" title="Zeile entfernen">&times;</button>
+      `;
+
+    row.querySelector(".quiz-del-btn").addEventListener("click", () => {
+      row.remove();
+    });
+
+    container.appendChild(row);
+  }
+
+  function checkQuizAnswer() {
+    if (!currentQuizTask) return;
+
+    const getInputs = (side) => {
+      const rows = document.getElementById(side === "soll" ? "quizSollInputs" : "quizHabenInputs").querySelectorAll(".quiz-row");
+      const list = [];
+      rows.forEach(r => {
+        const select = r.querySelector("select");
+        const input = r.querySelector("input");
+        const role = select ? select.value : "";
+        const val = input ? (parseFloat(input.value) || 0) : 0;
+        if (role !== "") {
+          list.push({ role, val });
+        }
+      });
+      return list;
+    };
+
+    const userSoll = getInputs("soll");
+    const userHaben = getInputs("haben");
+    const accounts = getAccounts();
+
+    const expectedSoll = currentQuizTask.soll;
+    const expectedHaben = currentQuizTask.haben;
+
+    const isMatching = (arr1, arr2) => {
+      if (arr1.length !== arr2.length) return false;
+      return arr1.every(item1 => arr2.some(item2 => item2.role === item1.role && Math.abs(item2.val - item1.val) < 0.01));
+    };
+
+    const isFullyCorrect = isMatching(userSoll, expectedSoll) && isMatching(userHaben, expectedHaben);
+    const fb = document.getElementById("quizFeedback");
+
+    const solSollStr = expectedSoll.map(s => `<b>${accounts[s.role] || s.role}</b> (EUR ${s.val.toLocaleString("de-DE")},-)`).join(" + ");
+    const solHabenStr = expectedHaben.map(h => `<b>${accounts[h.role] || h.role}</b> (EUR ${h.val.toLocaleString("de-DE")},-)`).join(" + ");
+    const solutionBlockHtml = `
+        <div class="feedback-solution-box">
+          <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Offizielle Musterlösung:</div>
+          <div><b>Soll:</b> ${solSollStr}</div>
+          <div style="margin-top: 3px;"><b>an Haben:</b> ${solHabenStr}</div>
+        </div>
+      `;
+
+    if (isFullyCorrect) {
+      quizScore++;
+      document.getElementById("quizScore").textContent = quizScore;
+      fb.className = "quiz-feedback success";
+      fb.innerHTML = `
+          <div class="feedback-title">🎉 Hervorragend gelöst!</div>
+          <div>Der Buchungssatz ist vollständig, alle Konten stehen auf der richtigen Seite und die Beträge stimmen exakt.</div>
+          <div style="font-size: 12.5px; color: #166534; margin-top: 6px;"><b>Erklärung:</b> ${currentQuizTask.reason}</div>
+          ${solutionBlockHtml}
+        `;
+      return;
+    }
+
+    const errors = [];
+
+    if (userSoll.length === 0 && userHaben.length === 0) {
+      errors.push("Du hast noch keine Konten ausgewählt.");
+    }
+
+    userSoll.forEach(u => {
+      if (expectedHaben.some(h => h.role === u.role)) {
+        errors.push(`<b>${accounts[u.role] || u.role}</b> steht fälschlicherweise im <b>Soll</b>, gehört aber ins <b>Haben</b>.`);
+      }
+    });
+    userHaben.forEach(u => {
+      if (expectedSoll.some(s => s.role === u.role)) {
+        errors.push(`<b>${accounts[u.role] || u.role}</b> steht fälschlicherweise im <b>Haben</b>, gehört aber ins <b>Soll</b>.`);
+      }
+    });
+
+    expectedSoll.forEach(exp => {
+      const inSoll = userSoll.some(u => u.role === exp.role);
+      const inHaben = userHaben.some(u => u.role === exp.role);
+      if (!inSoll && !inHaben) {
+        errors.push(`Im <b>Soll</b> fehlt das Konto <b>${accounts[exp.role] || exp.role}</b>.`);
+      }
+    });
+    expectedHaben.forEach(exp => {
+      const inSoll = userSoll.some(u => u.role === exp.role);
+      const inHaben = userHaben.some(u => u.role === exp.role);
+      if (!inSoll && !inHaben) {
+        errors.push(`Im <b>Haben</b> fehlt das Konto <b>${accounts[exp.role] || exp.role}</b>.`);
+      }
+    });
+
+    userSoll.forEach(u => {
+      const match = expectedSoll.find(s => s.role === u.role);
+      if (match && Math.abs(match.val - u.val) >= 0.01) {
+        errors.push(`Betrag bei <b>${accounts[u.role] || u.role}</b> im Soll ist nicht korrekt: Eingegeben EUR ${u.val},-, richtig wären EUR ${match.val},-.`);
+      }
+    });
+    userHaben.forEach(u => {
+      const match = expectedHaben.find(h => h.role === u.role);
+      if (match && Math.abs(match.val - u.val) >= 0.01) {
+        errors.push(`Betrag bei <b>${accounts[u.role] || u.role}</b> im Haben ist nicht korrekt: Eingegeben EUR ${u.val},-, richtig wären EUR ${match.val},-.`);
+      }
+    });
+
+    userSoll.forEach(u => {
+      if (!expectedSoll.some(s => s.role === u.role) && !expectedHaben.some(h => h.role === u.role)) {
+        errors.push(`Das Konto <b>${accounts[u.role] || u.role}</b> im Soll wird für diesen Fall nicht benötigt.`);
+      }
+    });
+    userHaben.forEach(u => {
+      if (!expectedSoll.some(s => s.role === u.role) && !expectedHaben.some(h => h.role === u.role)) {
+        errors.push(`Das Konto <b>${accounts[u.role] || u.role}</b> im Haben wird für diesen Fall nicht benötigt.`);
+      }
+    });
+
+    fb.className = "quiz-feedback error";
+    fb.innerHTML = `
+        <div class="feedback-title">❌ Noch nicht ganz richtig</div>
+        <div>Folgende Punkte passen noch nicht:</div>
+        <ul class="feedback-list">
+          ${errors.map(e => `<li>${e}</li>`).join("")}
+        </ul>
+        <div style="font-size: 12.5px; color: #7f1d1d; margin-bottom: 8px;"><b>Buchungs-Tipp:</b> ${currentQuizTask.reason}</div>
+        ${solutionBlockHtml}
+      `;
+  }
+
+  // 6. MODAL & KONTENPLAN LOGIK
+  function openModal() {
+    const accounts = getAccounts();
+    const container = document.getElementById("accountInputsContainer");
+    container.innerHTML = "";
+    for (const [key, val] of Object.entries(accounts)) {
+      const group = document.createElement("div");
+      group.className = "account-input-group";
+      group.innerHTML = `<label>${accountLabels[key] || key}:</label><input type="text" id="acc_input_${key}" value="${val}">`;
+      container.appendChild(group);
+    }
+    document.getElementById("customModal").classList.add("active");
+  }
+
+  function saveCustomAccounts() {
+    const updated = {};
+    for (const key of Object.keys(defaultAccounts)) {
+      const input = document.getElementById(`acc_input_${key}`);
+      if (input) updated[key] = input.value.trim();
+    }
+    localStorage.setItem("customAccountsPlan", JSON.stringify(updated));
+    document.getElementById("customModal").classList.remove("active");
+    renderGenerator();
+    if (document.getElementById("view-quiz").classList.contains("active")) {
+      loadNextQuizTask();
+    }
+  }
+
+  function resetDefaultAccounts() {
+    localStorage.removeItem("customAccountsPlan");
+    openModal();
+  }
+
+  // 7. EVENT LISTENERS INITIALISIERUNG
+  document.addEventListener("DOMContentLoaded", () => {
+    // Navigation
+    document.getElementById("nav-learn-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      document.getElementById("learnDropdown").classList.toggle("show");
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".nav-dropdown")) {
+        document.getElementById("learnDropdown").classList.remove("show");
+      }
+    });
+
+    document.getElementById("drop-quiz-btn").addEventListener("click", () => switchView("quiz"));
+    document.getElementById("drop-theory-btn").addEventListener("click", () => switchView("theory-ap"));
+    document.getElementById("nav-modal-btn").addEventListener("click", openModal);
+
+    // Generator Buttons
+    document.getElementById("shuffleBtn").addEventListener("click", renderGenerator);
+    document.getElementById("typeSelect").addEventListener("change", renderGenerator);
+    document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+    // Quiz Buttons
+    document.getElementById("addSollBtn").addEventListener("click", () => addQuizRow("soll"));
+    document.getElementById("addHabenBtn").addEventListener("click", () => addQuizRow("haben"));
+    document.getElementById("checkQuizBtn").addEventListener("click", checkQuizAnswer);
+    document.getElementById("nextQuizBtn").addEventListener("click", loadNextQuizTask);
+
+    // Modal Buttons
+    document.getElementById("saveModalBtn").addEventListener("click", saveCustomAccounts);
+    document.getElementById("resetModalBtn").addEventListener("click", resetDefaultAccounts);
+    document.getElementById("customModal").addEventListener("click", (e) => {
+      if (e.target.id === "customModal") document.getElementById("customModal").classList.remove("active");
+    });
+
+    // Start initialisieren
+    renderGenerator();
+    loadNextQuizTask();
+  });
+</script>
+</body>
+</html>
